@@ -21,30 +21,32 @@ parser.add_argument("user_prompt", type=str, help="User prompt")
 parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
 args = parser.parse_args()
 
-response = client.chat.completions.create(
-    model="openrouter/free",
-    messages=[
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": args.user_prompt},
-    ],
-    tools=available_functions,
-)
+messages = [
+    {"role": "system", "content": system_prompt},
+    {"role": "user", "content": args.user_prompt},
+]
 
-message = response.choices[0].message
-for tool_call in message.tool_calls or []:
-    result_message = call_function(tool_call, args.verbose)
-    if not result_message["content"]:
-        raise RuntimeError("Function returned empty content")
-    if args.verbose:
-        print(f"-> {result_message['content']}")
+for _ in range(20):
+    response = client.chat.completions.create(
+        model="openrouter/free",
+        messages=messages,
+        tools=available_functions,
+    )
+    message = response.choices[0].message
+    messages.append(message)
 
-if args.verbose:
-    if response.usage is None:
-        raise RuntimeError(
-            "Response usage is None. This may indicate a failed API request."
-        )
-    print(f"User prompt: {args.user_prompt}")
-    print(f"Prompt tokens: {response.usage.prompt_tokens}")
-    print(f"Response tokens: {response.usage.completion_tokens}")
+    if not message.tool_calls:
+        final_response = message.content or ""
+        print(final_response.encode("ascii", errors="replace").decode("ascii"))
+        break
 
-print(response.choices[0].message.content)
+    for tool_call in message.tool_calls:
+        result_message = call_function(tool_call, args.verbose)
+        if not result_message["content"]:
+            raise RuntimeError("Function returned empty content")
+        if args.verbose:
+            print(f"-> {result_message['content']}")
+        messages.append(result_message)
+else:
+    print("Error: Agent reached maximum iterations without producing a final response.")
+    raise SystemExit(1)
