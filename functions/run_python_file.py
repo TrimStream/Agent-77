@@ -49,3 +49,27 @@ def run_python_file(
         return "\n".join(parts)
     except Exception as e:
         return f"Error: executing Python file: {e}"
+
+
+schema_run_python_file = {
+    "type": "function",
+    "function": {
+        "name": "run_python_file",
+        "description": "Executes a Python file relative to the working directory with optional command-line arguments and returns captured output",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Python file path to execute, relative to the working directory",
+                },
+                "args": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional command-line arguments passed to the Python file",
+                },
+            },
+            "required": ["file_path"],
+        },
+    },
+}
